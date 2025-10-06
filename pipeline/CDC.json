@@ -1,0 +1,392 @@
+{
+	"name": "CDC",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup Last LSN",
+				"description": "Fetches the last processed LSN (Log Sequence Number) from the CDC_Control table.This LSN is used to identify which changes in cdc.dbo_Sales_RAW_CT have already been processed, enabling incremental load.",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "SELECT Last_LSN\nFROM CDC_Control\nWHERE TableName = 'Sales_RAW';\n",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "SqlServerTable5",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set LastLSN",
+				"description": "Stores the value returned by the Lookup activity in a pipeline variable called LastLSN.This variable will be passed to the Copy Activity to filter CDC rows",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Lookup Last LSN",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "LastLSN",
+					"value": {
+						"value": "@activity('Lookup Last LSN').output.firstRow.Last_LSN\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Copy data1",
+				"description": "Reads changes from the CDC table cdc.dbo_Sales_RAW_CT using the LastLSN variable to filter only new changes.Loads these rows into staging table Sales_RAW_Staging",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set LastLSN",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "SqlServerSink",
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "__$start_lsn",
+									"type": "Byte[]",
+									"physicalType": "binary"
+								},
+								"sink": {
+									"name": "__$start_lsn",
+									"type": "Byte[]",
+									"physicalType": "binary"
+								}
+							},
+							{
+								"source": {
+									"name": "__$end_lsn",
+									"type": "Byte[]",
+									"physicalType": "binary"
+								},
+								"sink": {
+									"name": "__$end_lsn",
+									"type": "Byte[]",
+									"physicalType": "binary"
+								}
+							},
+							{
+								"source": {
+									"name": "__$seqval",
+									"type": "Byte[]",
+									"physicalType": "binary"
+								},
+								"sink": {
+									"name": "__$seqval",
+									"type": "Byte[]",
+									"physicalType": "binary"
+								}
+							},
+							{
+								"source": {
+									"name": "__$operation",
+									"type": "Int32",
+									"physicalType": "int"
+								},
+								"sink": {
+									"name": "__$operation",
+									"type": "Int32",
+									"physicalType": "int"
+								}
+							},
+							{
+								"source": {
+									"name": "__$update_mask",
+									"type": "Byte[]",
+									"physicalType": "varbinary"
+								},
+								"sink": {
+									"name": "__$update_mask",
+									"type": "Byte[]",
+									"physicalType": "varbinary"
+								}
+							},
+							{
+								"source": {
+									"name": "OrderID",
+									"type": "Int16",
+									"physicalType": "smallint"
+								},
+								"sink": {
+									"name": "OrderID",
+									"type": "Int16",
+									"physicalType": "smallint"
+								}
+							},
+							{
+								"source": {
+									"name": "CustomerID",
+									"type": "String",
+									"physicalType": "nvarchar"
+								},
+								"sink": {
+									"name": "CustomerID",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "OrderDate",
+									"type": "Date",
+									"physicalType": "date"
+								},
+								"sink": {
+									"name": "OrderDate",
+									"type": "Date",
+									"physicalType": "date"
+								}
+							},
+							{
+								"source": {
+									"name": "ProductID",
+									"type": "Decimal",
+									"physicalType": "money",
+									"scale": 4,
+									"precision": 19
+								},
+								"sink": {
+									"name": "ProductID",
+									"type": "Decimal",
+									"physicalType": "money",
+									"scale": 4,
+									"precision": 19
+								}
+							},
+							{
+								"source": {
+									"name": "ProductCategory",
+									"type": "String",
+									"physicalType": "nvarchar"
+								},
+								"sink": {
+									"name": "ProductCategory",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "Quantity",
+									"type": "Byte",
+									"physicalType": "tinyint"
+								},
+								"sink": {
+									"name": "Quantity",
+									"type": "Byte",
+									"physicalType": "tinyint"
+								}
+							},
+							{
+								"source": {
+									"name": "UnitPrice",
+									"type": "Int16",
+									"physicalType": "smallint"
+								},
+								"sink": {
+									"name": "UnitPrice",
+									"type": "Int16",
+									"physicalType": "smallint"
+								}
+							},
+							{
+								"source": {
+									"name": "SalesAmount",
+									"type": "Int16",
+									"physicalType": "smallint"
+								},
+								"sink": {
+									"name": "SalesAmount",
+									"type": "Int16",
+									"physicalType": "smallint"
+								}
+							},
+							{
+								"source": {
+									"name": "Phone",
+									"type": "Int64",
+									"physicalType": "bigint"
+								},
+								"sink": {
+									"name": "Phone",
+									"type": "Int64",
+									"physicalType": "bigint"
+								}
+							},
+							{
+								"source": {
+									"name": "Region",
+									"type": "String",
+									"physicalType": "nvarchar"
+								},
+								"sink": {
+									"name": "Region",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "__$command_id",
+									"type": "Int32",
+									"physicalType": "int"
+								},
+								"sink": {
+									"name": "__$command_id",
+									"type": "Int32",
+									"physicalType": "int"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "SqlServerTable4",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "SqlServerTable6",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "Script1",
+				"description": "Applies the changes from the staging table to the main target table Sales_RAW",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Copy data1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "SqlServer1",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": "WITH LatestChanges AS (\n    SELECT *\n    FROM (\n        SELECT *,\n               ROW_NUMBER() OVER (PARTITION BY OrderID ORDER BY __$start_lsn DESC) AS rn\n        FROM Sales_RAW_Staging\n    ) t\n    WHERE rn = 1\n)\nMERGE INTO Sales_RAW AS tgt\nUSING LatestChanges AS src\nON tgt.OrderID = src.OrderID\nWHEN MATCHED AND src.__$operation = 1 THEN DELETE\nWHEN MATCHED AND src.__$operation = 3 THEN UPDATE SET\n    tgt.CustomerID = src.CustomerID,\n    tgt.SalesAmount = src.SalesAmount,\n    tgt.OrderDate = src.OrderDate,\n    tgt.ProductID = src.ProductID,\n    tgt.ProductCategory = src.ProductCategory,\n    tgt.Quantity = src.Quantity,\n    tgt.UnitPrice = src.UnitPrice,\n    tgt.Phone = src.Phone,\n    tgt.Region = src.Region\nWHEN NOT MATCHED AND src.__$operation = 2 THEN INSERT\n    (OrderID, CustomerID, SalesAmount, OrderDate, ProductID, ProductCategory, Quantity, UnitPrice, Phone, Region)\nVALUES\n    (src.OrderID, src.CustomerID, src.SalesAmount, src.OrderDate, src.ProductID, src.ProductCategory, src.Quantity, src.UnitPrice, src.Phone, src.Region);\n"
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Script2",
+				"description": "Clears all rows from Sales_RAW_Staging after the MERGE is complete.",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Script1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "SqlServer1",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": "TRUNCATE TABLE Sales_RAW_Staging;\n"
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"LastLSNParam": {
+				"type": "string",
+				"defaultValue": "@variables('LastLSN')"
+			}
+		},
+		"variables": {
+			"LastLSN": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-09-25T11:10:40Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

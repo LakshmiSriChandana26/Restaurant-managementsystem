@@ -1,0 +1,169 @@
+{
+	"name": "transformations",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "sales_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				},
+				{
+					"dataset": {
+						"referenceName": "Customer",
+						"type": "DatasetReference"
+					},
+					"name": "source2"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "transoutput",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				},
+				{
+					"dataset": {
+						"referenceName": "saleserror",
+						"type": "DatasetReference"
+					},
+					"name": "sink2"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "split1"
+				},
+				{
+					"name": "join1"
+				},
+				{
+					"name": "surrogateKey1"
+				},
+				{
+					"name": "aggregate1"
+				},
+				{
+					"name": "select1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          OrderID as string,",
+				"          CustomerID as string,",
+				"          OrderDate as string,",
+				"          ProductID as string,",
+				"          ProductCategory as string,",
+				"          Quantity as string,",
+				"          UnitPrice as string,",
+				"          SalesAmount as string,",
+				"          Phone as string,",
+				"          Region as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source(output(",
+				"          CustomerID as string,",
+				"          CustomerName as string,",
+				"          ContactFirstName as string,",
+				"          ContactLastName as string,",
+				"          Phone as string,",
+				"          Address as string,",
+				"          City as string,",
+				"          State as string,",
+				"          Country as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source2",
+				"source1 derive(SalesAmount = toDecimal(SalesAmount),",
+				"          Quantity = toInteger(Quantity),",
+				"          UnitPrice = toDecimal(UnitPrice),",
+				"          {Mask Phone Columncolumn1} = concat(substring(Phone, 1, 3), 'XXXXXX'),",
+				"          {Recalculate SalesAmount} = toDecimal(Quantity) * toDecimal(UnitPrice)) ~> derivedColumn1",
+				"derivedColumn1 split(!isNull(OrderID) && !isNull(CustomerID) && !isNull(ProductID) && SalesAmount > 0,",
+				"     disjoint: false) ~> split1@(validrows, errorrows)",
+				"split1@validrows, source2 join(split1@validrows@CustomerID == source2@CustomerID,",
+				"     joinType:'outer',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> join1",
+				"select1 keyGenerate(output(SalesKey as long),",
+				"     startAt: 1L,",
+				"     stepValue: 1L) ~> surrogateKey1",
+				"surrogateKey1 aggregate(groupBy(SalesAmount),",
+				"     OrderID = count(OrderID)) ~> aggregate1",
+				"join1 select(mapColumn(",
+				"          OrderID,",
+				"          CustomerID = split1@validrows@CustomerID,",
+				"          OrderDate,",
+				"          ProductID,",
+				"          ProductCategory,",
+				"          Quantity,",
+				"          UnitPrice,",
+				"          SalesAmount,",
+				"          Phone = split1@validrows@Phone,",
+				"          Region,",
+				"          {Mask Phone Columncolumn1},",
+				"          {Recalculate SalesAmount},",
+				"          CustomerID = source2@CustomerID,",
+				"          CustomerName,",
+				"          ContactFirstName,",
+				"          ContactLastName,",
+				"          Phone = source2@Phone,",
+				"          Address,",
+				"          City,",
+				"          State,",
+				"          Country",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"aggregate1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          CustomerID as string,",
+				"          CustomerName as string,",
+				"          ContactFirstName as string,",
+				"          ContactLastName as string,",
+				"          Phone as string,",
+				"          Address as string,",
+				"          City as string,",
+				"          State as string,",
+				"          Country as string",
+				"     ),",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink1",
+				"split1@errorrows sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          CustomerID as string,",
+				"          CustomerName as string,",
+				"          ContactFirstName as string,",
+				"          ContactLastName as string,",
+				"          Phone as string,",
+				"          Address as string,",
+				"          City as string,",
+				"          State as string,",
+				"          Country as string",
+				"     ),",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink2"
+			]
+		}
+	}
+}

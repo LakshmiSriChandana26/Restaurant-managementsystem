@@ -1,0 +1,20 @@
+{
+	"name": "Wrangllingdataflow",
+	"properties": {
+		"type": "WranglingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"name": "DelimitedText2",
+					"script": "source(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> DelimitedText2",
+					"dataset": {
+						"referenceName": "input",
+						"type": "DatasetReference"
+					}
+				}
+			],
+			"script": "section Section1;\r\nshared DelimitedText2 = let AdfDoc = AzureStorage.DataLakeContents(\"https://chandanasa.dfs.core.windows.net/chandana/sales_data_100k.csv\"),Csv = Csv.Document(AdfDoc, [Delimiter = \",\", Encoding = TextEncoding.Utf8, QuoteStyle = QuoteStyle.Csv]), PromotedHeaders = Table.PromoteHeaders(Csv, [PromoteAllScalars = true]) in  PromotedHeaders;\r\nshared UserQuery = let Source = #\"DelimitedText2\" in Source;\r\n",
+			"documentLocale": "en-us"
+		}
+	}
+}

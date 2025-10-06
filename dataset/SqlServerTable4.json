@@ -1,0 +1,91 @@
+{
+	"name": "SqlServerTable4",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SqlServer1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [
+			{
+				"name": "__$start_lsn",
+				"type": "binary"
+			},
+			{
+				"name": "__$end_lsn",
+				"type": "binary"
+			},
+			{
+				"name": "__$seqval",
+				"type": "binary"
+			},
+			{
+				"name": "__$operation",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "__$update_mask",
+				"type": "varbinary"
+			},
+			{
+				"name": "OrderID",
+				"type": "smallint",
+				"precision": 5
+			},
+			{
+				"name": "CustomerID",
+				"type": "nvarchar"
+			},
+			{
+				"name": "OrderDate",
+				"type": "date"
+			},
+			{
+				"name": "ProductID",
+				"type": "money",
+				"precision": 19,
+				"scale": 4
+			},
+			{
+				"name": "ProductCategory",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Quantity",
+				"type": "tinyint",
+				"precision": 3
+			},
+			{
+				"name": "UnitPrice",
+				"type": "smallint",
+				"precision": 5
+			},
+			{
+				"name": "SalesAmount",
+				"type": "smallint",
+				"precision": 5
+			},
+			{
+				"name": "Phone",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "Region",
+				"type": "nvarchar"
+			},
+			{
+				"name": "__$command_id",
+				"type": "int",
+				"precision": 10
+			}
+		],
+		"typeProperties": {
+			"schema": "cdc",
+			"table": "dbo_Sales_RAW_CT"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
