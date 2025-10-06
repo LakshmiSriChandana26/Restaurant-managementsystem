@@ -10,6 +10,8 @@
 		"typeProperties": {
 			"location": {
 				"type": "AzureBlobFSLocation",
+				"fileName": "output.csv",
+				"folderPath": "OUTPUT",
 				"fileSystem": "chandana"
 			},
 			"columnDelimiter": ",",
